@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>收藏网页</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>📚 收藏网页</h2>
+        </div>
+        
+        <div class="content">
+            <div class="url-info">
+                <div class="favicon-container">
+                    <img id="favicon" src="" alt="" class="favicon">
+                </div>
+                <div class="page-info">
+                    <div id="title" class="page-title">加载中...</div>
+                    <div id="url" class="page-url">加载中...</div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="tags">标签 (用逗号分隔):</label>
+                <input type="text" id="tags" placeholder="例如: 技术, 前端, 工具" maxlength="100">
+            </div>
+            
+            <div class="form-group">
+                <label for="note">备注:</label>
+                <textarea id="note" placeholder="添加备注..." rows="3" maxlength="200"></textarea>
+            </div>
+            
+            <div class="actions">
+                <button id="saveBtn" class="save-btn">
+                    <span class="btn-text">💾 收藏</span>
+                    <span class="loading" style="display: none;">收藏中...</span>
+                </button>
+                <button id="cancelBtn" class="cancel-btn">取消</button>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div id="status" class="status"></div>
+        </div>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html> 

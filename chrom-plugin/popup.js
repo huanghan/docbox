@@ -57,6 +57,41 @@ class BookmarkPopup {
 
         // 自动生成建议标签
         await this.generateSuggestedTags();
+
+        // 自动提取文章内容，显示到note
+        try {
+            const note = document.getElementById('note');
+            const articleData = await this.getPageContent();
+            if (articleData && articleData.summary) {
+                note.value = "自动提取的文章摘要：\n" + articleData.summary + "\n\n" 
+                            + "自动提取的文章关键词：\n" + articleData.keywords.join(', ')
+                            + "\n\n"
+                            + "自动提取的文章标题：\n" + articleData.title+
+                            "\n\n"
+                            + "自动提取的文章内容：\n" + articleData.content;
+
+            }
+        } catch (error) {
+            console.error('自动提取内容失败:', error);
+        }
+    }
+
+    async getPageContent() {
+        try {
+            console.log('🔍 开始提取页面内容...');
+            // 使用content script提取页面内容，避免跨域问题
+            const [result] = await chrome.scripting.executeScript({
+                target: { tabId: this.currentTab.id },
+                func: extractArticleContent
+            });
+            
+            console.log('✅ 内容提取完成:', result);
+            return result.result || {};
+        } catch (error) {
+            console.error('❌ 获取页面内容失败:', error);
+            console.error('错误详情:', error.stack);
+            return {};
+        }
     }
 
     async generateSuggestedTags() {
@@ -126,25 +161,42 @@ class BookmarkPopup {
 
         // 禁用按钮，显示加载状态
         saveBtn.disabled = true;
+        saveBtn.textContent = '正在提取内容...';
 
         try {
+            // 提取页面文章内容
+            console.log('🚀 开始保存收藏...');
+            this.showStatus('正在提取文章内容...', 'info');
+            
+            console.log('📄 当前标签页信息:', this.currentTab);
+            const articleData = await this.getPageContent();
+            console.log('📝 提取的文章数据:', articleData);
+
             const bookmarkData = {
                 url: this.currentTab.url,
-                title: this.currentTab.title,
+                title: this.currentTab.title || articleData.title,
                 tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
                 note: note,
                 favicon: this.currentTab.favIconUrl,
-                timestamp: new Date().toISOString(),
-                domain: new URL(this.currentTab.url).hostname
+                domain: new URL(this.currentTab.url).hostname,
+                // 新增的文章内容字段
+                content: articleData.content || '',
+                summary: articleData.summary || '',
+                keywords: articleData.keywords || [],
+                extracted_at: articleData.timestamp || new Date().toISOString(),
+                type: 'bookmark'
             };
 
+            console.log('📦 准备发送的收藏数据:', bookmarkData);
+
             // 发送到收藏服务器
+            this.showStatus('正在保存到服务器...', 'info');
             await this.sendToServer(bookmarkData);
             
             // 保存到本地存储（备份）
             await this.saveToLocal(bookmarkData);
 
-            this.showStatus('✅ 收藏成功！', 'success');
+            this.showStatus('✅ 收藏成功！已提取文章内容', 'success');
             
             // 2秒后自动关闭
             setTimeout(() => {
@@ -152,10 +204,13 @@ class BookmarkPopup {
             }, 2000);
 
         } catch (error) {
-            console.error('保存失败:', error);
+            console.error('❌ 保存失败:', error);
+            console.error('错误堆栈:', error.stack);
             this.showStatus('❌ 保存失败: ' + error.message, 'error');
         } finally {
+            console.log('🔄 保存流程结束');
             saveBtn.disabled = false;
+            saveBtn.textContent = '保存收藏';
         }
     }
 
@@ -244,6 +299,114 @@ class BookmarkPopup {
             statusEl.className = 'status';
         }, 3000);
     }
+}
+
+// 在页面中执行的内容提取函数（独立函数，不属于类）
+function extractArticleContent() {
+    // 常见的文章内容选择器
+    const articleSelectors = [
+        'article',
+        '[role="main"]',
+        '.article-content',
+        '.post-content',
+        '.entry-content',
+        '.content',
+        '.main-content',
+        '.article-body',
+        '.post-body',
+        '.RichText', // 知乎
+        '.Post-RichText', // 知乎专栏
+        '.content_area', // 微信公众号
+        '.rich_media_content', // 微信公众号
+        '#js_content', // 微信公众号
+        '.article', // 通用
+        'main',
+        '#main',
+        '.markdown-body', // GitHub
+        '.post', // 博客
+        '.entry' // 博客
+    ];
+
+    let content = '';
+    let title = '';
+    let summary = '';
+
+    // 提取标题
+    const titleSelectors = ['h1', 'title', '.title', '.post-title', '.article-title'];
+    for (const selector of titleSelectors) {
+        const titleEl = document.querySelector(selector);
+        if (titleEl && titleEl.textContent.trim()) {
+            title = titleEl.textContent.trim();
+            break;
+        }
+    }
+
+    // 提取正文内容
+    for (const selector of articleSelectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+            // 移除脚本、样式等不需要的元素
+            const clonedElement = element.cloneNode(true);
+            const unwantedElements = clonedElement.querySelectorAll('script, style, nav, header, footer, aside, .ad, .advertisement, .social-share, .comments');
+            unwantedElements.forEach(el => el.remove());
+            
+            content = clonedElement.textContent || clonedElement.innerText || '';
+            content = content.replace(/\s+/g, ' ').trim();
+            
+            if (content.length > 100) { // 确保内容足够长
+                break;
+            }
+        }
+    }
+
+    // 如果没有找到文章内容，尝试提取body内容
+    if (!content || content.length < 100) {
+        const bodyContent = document.body.textContent || document.body.innerText || '';
+        content = bodyContent.replace(/\s+/g, ' ').trim();
+    }
+
+    // 简单的关键词提取函数（在content script中定义）
+    function extractKeywords(text) {
+        if (!text) return [];
+        
+        // 移除标点符号，转换为小写，分割成词
+        const words = text.toLowerCase()
+            .replace(/[^\w\s\u4e00-\u9fff]/g, ' ')
+            .split(/\s+/)
+            .filter(word => word.length > 2); // 过滤太短的词
+
+        // 统计词频
+        const wordCount = {};
+        words.forEach(word => {
+            wordCount[word] = (wordCount[word] || 0) + 1;
+        });
+
+        // 排序并返回前10个高频词
+        return Object.entries(wordCount)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([word]) => word);
+    }
+
+    // 生成摘要（前200字符）
+    if (content.length > 200) {
+        summary = content.substring(0, 200) + '...';
+    } else {
+        summary = content;
+    }
+
+    // 提取关键词
+    const keywords = extractKeywords(content);
+
+    return {
+        title: title || document.title,
+        content: content,
+        summary: summary,
+        keywords: keywords,
+        url: window.location.href,
+        domain: window.location.hostname,
+        timestamp: new Date().toISOString()
+    };
 }
 
 // 当页面加载完成时初始化

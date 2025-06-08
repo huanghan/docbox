@@ -1,83 +1,34 @@
 {
-  "total_bookmarks": 18,
-  "last_updated": "2025-05-26T15:55:11.531753",
+  "total_bookmarks": 1,
+  "last_updated": "2025-06-08T08:38:45.217110",
   "date_counts": {
-    "2025-05-25": 10,
-    "2025-05-26": 8
+    "2025-06-08": 1
   },
   "top_tags": [
     [
-      "测试",
-      3
+      "Python",
+      1
     ],
     [
-      "开发",
-      2
+      "FastAPI",
+      1
+    ],
+    [
+      "API",
+      1
     ],
     [
       "文档",
-      2
-    ],
-    [
-      "选中内容",
-      2
-    ],
-    [
-      "文本",
-      2
-    ],
-    [
-      "Chrome插件",
-      2
-    ],
-    [
-      "代码",
       1
     ],
     [
-      "Git",
-      1
-    ],
-    [
-      "编程",
-      1
-    ],
-    [
-      "问答",
+      "更新",
       1
     ]
   ],
   "top_domains": [
     [
-      "example.com",
-      3
-    ],
-    [
-      "mp.weixin.qq.com",
-      3
-    ],
-    [
-      "github.com",
-      1
-    ],
-    [
-      "stackoverflow.com",
-      1
-    ],
-    [
-      "developer.mozilla.org",
-      1
-    ],
-    [
       "fastapi.tiangolo.com",
-      1
-    ],
-    [
-      "localhost",
-      1
-    ],
-    [
-      "zhuanlan.zhihu.com",
       1
     ]
   ]

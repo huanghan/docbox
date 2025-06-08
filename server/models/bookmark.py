@@ -5,6 +5,32 @@
 from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field
+from sqlalchemy import Column, String, DateTime, Text, JSON, Integer
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql import func
+
+Base = declarative_base()
+
+
+class BookmarkORM(Base):
+    """收藏数据库表模型"""
+    __tablename__ = "bookmarks"
+    
+    id = Column(String, primary_key=True, index=True)
+    url = Column(String, nullable=False, index=True)
+    title = Column(String(500), nullable=False)
+    tags = Column(JSON, default=list)
+    note = Column(Text, default="")
+    favicon = Column(String, default="")
+    domain = Column(String, default="", index=True)
+    content = Column(Text, default="")
+    summary = Column(Text, default="")
+    keywords = Column(JSON, default=list)
+    timestamp = Column(DateTime, default=func.now())
+    created_date = Column(String, default="")
+    user_agent = Column(String, default="")
+    type = Column(String, default="bookmark")
+    extracted_at = Column(String, default="")
 
 
 class BookmarkBase(BaseModel):

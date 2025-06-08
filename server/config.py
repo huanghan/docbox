@@ -1,72 +1,24 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-应用配置
+数据库配置文件
 """
-
 import os
-from typing import List, Optional
-from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
 
+# 加载.env文件
+load_dotenv()
 
-class Settings(BaseSettings):
-    """应用设置"""
-    
-    # 基本设置
-    app_name: str = "Bookmark Server"
-    app_version: str = "2.0.0"
-    debug: bool = False
-    
-    # 服务器设置
-    host: str = "localhost"
-    port: int = 3000
-    reload: bool = False
-    
-    # 数据存储设置
-    data_dir: str = "data"
-    
-    # CORS设置
-    cors_origins: List[str] = [
-        "chrome-extension://*",
-        "http://localhost:*",
-        "http://127.0.0.1:*"
-    ]
-    cors_methods: List[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    cors_headers: List[str] = ["*"]
-    
-    # 认证设置
-    api_keys: List[str] = []
-    require_auth: bool = False
-    
-    # 日志设置
-    log_level: str = "INFO"
-    log_file: Optional[str] = None
-    
-    # 分页设置
-    default_page_size: int = 20
-    max_page_size: int = 100
-    
-    # 备份设置
-    auto_backup: bool = True
-    backup_keep_days: int = 30
-    
-    class Config:
-        env_file = ".env"
-        env_prefix = "BOOKMARK_"
+# MySQL 数据库配置
+MYSQL_CONFIG = {
+    'host': os.getenv('MYSQL_HOST', 'localhost'),
+    'port': int(os.getenv('MYSQL_PORT', 3306)),
+    'user': os.getenv('MYSQL_USER', 'root'),
+    'password': os.getenv('MYSQL_PASSWORD', '123456'),
+    'database': os.getenv('MYSQL_DATABASE', 'notedocs')
+}
 
-
-# 全局设置实例
-settings = Settings()
-
-
-def get_settings() -> Settings:
-    """获取设置实例"""
-    return settings
-
-print(f"📋 服务器配置:")
-print(f"   - 主机: {settings.host}")
-print(f"   - 端口: {settings.port}")
-print(f"   - 数据目录: {settings.data_dir}")
-print(f"   - API密钥验证: {'启用' if settings.require_auth else '禁用'}")
-print(f"   - 日志级别: {settings.log_level}")
-print("-" * 30) 
+# FastAPI 配置
+API_CONFIG = {
+    'host': os.getenv('API_HOST', '127.0.0.1'),
+    'port': int(os.getenv('API_PORT', 8000)),
+    'debug': os.getenv('API_DEBUG', 'True').lower() == 'true'
+} 

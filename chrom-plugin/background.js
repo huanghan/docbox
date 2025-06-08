@@ -249,25 +249,100 @@ class BookmarkBackground {
 
     // 发送到服务器
     async sendToServer(bookmarkData) {
-        const result = await chrome.storage.sync.get(['serverUrl', 'apiKey']);
-        const serverUrl = result.serverUrl || 'http://localhost:3000';
+        const result = await chrome.storage.sync.get(['serverUrl', 'apiKey', 'userId']);
+        const serverUrl = result.serverUrl || 'http://localhost:8001';
         const apiKey = result.apiKey || '';
+        const userId = result.userId || 1; // 默认用户ID
 
-        const response = await fetch(`${serverUrl}/api/bookmarks`, {
+        // 转换数据格式以匹配新的文档接口
+        const documentData = {
+            uid: userId,
+            url: bookmarkData.url || '',
+            title: bookmarkData.title || 'Untitled',
+            summary: this.generateSummary(bookmarkData),
+            content: this.generateContent(bookmarkData),
+            source: bookmarkData.url || '',
+            favicon: bookmarkData.favicon || '',
+            tags: Array.isArray(bookmarkData.tags) ? bookmarkData.tags.join(', ') : (bookmarkData.tags || ''),
+            evaluate: 0
+        };
+
+        const response = await fetch(`${serverUrl}/api/documents`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': apiKey ? `Bearer ${apiKey}` : '',
                 'User-Agent': 'BookmarkExtension/1.0.0'
             },
-            body: JSON.stringify(bookmarkData)
+            body: JSON.stringify(documentData)
         });
 
         if (!response.ok) {
-            throw new Error(`服务器错误: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`服务器错误 ${response.status}: ${errorText}`);
         }
 
         return await response.json();
+    }
+
+    // 生成摘要
+    generateSummary(bookmarkData) {
+        const parts = [];
+        
+        if (bookmarkData.domain) {
+            parts.push(`来自 ${bookmarkData.domain}`);
+        }
+        
+        if (bookmarkData.type) {
+            const typeMap = {
+                'selection': '选中内容',
+                'quick': '快速收藏',
+                'manual': '手动收藏'
+            };
+            parts.push(typeMap[bookmarkData.type] || bookmarkData.type);
+        }
+        
+        if (bookmarkData.note) {
+            parts.push(bookmarkData.note);
+        }
+        
+        return parts.join(' - ') || `网页收藏: ${bookmarkData.title || ''}`;
+    }
+
+    // 生成内容
+    generateContent(bookmarkData) {
+        const content = [];
+        
+        content.push(`# ${bookmarkData.title || 'Untitled'}`);
+        content.push('');
+        content.push(`**网址**: ${bookmarkData.url || ''}`);
+        
+        if (bookmarkData.domain) {
+            content.push(`**域名**: ${bookmarkData.domain}`);
+        }
+        
+        if (bookmarkData.timestamp) {
+            content.push(`**收藏时间**: ${new Date(bookmarkData.timestamp).toLocaleString('zh-CN')}`);
+        }
+        
+        if (bookmarkData.tags && bookmarkData.tags.length > 0) {
+            const tags = Array.isArray(bookmarkData.tags) ? bookmarkData.tags : [bookmarkData.tags];
+            content.push(`**标签**: ${tags.join(', ')}`);
+        }
+        
+        if (bookmarkData.note) {
+            content.push('');
+            content.push('## 备注');
+            content.push(bookmarkData.note);
+        }
+        
+        if (bookmarkData.content) {
+            content.push('');
+            content.push('## 内容');
+            content.push(bookmarkData.content);
+        }
+        
+        return content.join('\n');
     }
 
     // 保存到本地
@@ -318,12 +393,13 @@ class BookmarkBackground {
 
     // 设置默认配置
     async setDefaultSettings() {
-        const result = await chrome.storage.sync.get(['serverUrl', 'apiKey']);
+        const result = await chrome.storage.sync.get(['serverUrl', 'apiKey', 'userId']);
         
         if (!result.serverUrl) {
             await chrome.storage.sync.set({
-                serverUrl: 'http://localhost:3000',
+                serverUrl: 'http://localhost:8000',
                 apiKey: '',
+                userId: 1,
                 autoTags: true,
                 notifications: true
             });

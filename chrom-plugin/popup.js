@@ -1,4 +1,4 @@
-// 弹出界面的主要逻辑
+// 点击收藏按钮弹出界面的主要逻辑
 class BookmarkPopup {
     constructor() {
         this.currentTab = null;
@@ -63,10 +63,9 @@ class BookmarkPopup {
             const note = document.getElementById('note');
             const articleData = await this.getPageContent();
             if (articleData && articleData.summary) {
-                note.value = "自动提取的文章摘要：\n" + articleData.summary + "\n\n" 
+                note.value = "标题：" + articleData.title + "\n\n";
+                note.value += "自动提取的文章摘要：\n" + articleData.summary + "\n\n" 
                             + "自动提取的文章关键词：\n" + articleData.keywords.join(', ')
-                            + "\n\n"
-                            + "自动提取的文章标题：\n" + articleData.title+
                             "\n\n"
                             + "自动提取的文章内容：\n" + articleData.content;
 
@@ -174,7 +173,7 @@ class BookmarkPopup {
 
             const bookmarkData = {
                 url: this.currentTab.url,
-                title: this.currentTab.title || articleData.title,
+                title: articleData.title || this.currentTab.title ,
                 tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
                 note: note,
                 favicon: this.currentTab.favIconUrl,
@@ -216,31 +215,109 @@ class BookmarkPopup {
 
     async sendToServer(bookmarkData) {
         // 从存储中获取服务器配置
-        const result = await chrome.storage.sync.get(['serverUrl', 'apiKey']);
-        const serverUrl = result.serverUrl || 'http://localhost:3000'; // 默认服务器地址
+        const result = await chrome.storage.sync.get(['serverUrl', 'apiKey', 'userId']);
+        const serverUrl = result.serverUrl || 'http://localhost:8001'; // 默认服务器地址
         const apiKey = result.apiKey || '';
+        const userId = result.userId || 1; // 默认用户ID
 
-        const response = await fetch(`${serverUrl}/api/bookmarks`, {
+        // 转换数据格式以匹配新的文档接口
+        const documentData = {
+            uid: userId,
+            url: bookmarkData.url || '',
+            title: bookmarkData.title || 'Untitled',
+            summary: this.generateSummary(bookmarkData),
+            content: this.generateContent(bookmarkData),
+            source: bookmarkData.url || '',
+            favicon: bookmarkData.favicon || '',
+            tags: Array.isArray(bookmarkData.tags) ? bookmarkData.tags.join(', ') : (bookmarkData.tags || ''),
+            evaluate: 0
+        };
+
+        const response = await fetch(`${serverUrl}/api/documents`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': apiKey ? `Bearer ${apiKey}` : '',
                 'User-Agent': 'BookmarkExtension/1.0.0'
             },
-            body: JSON.stringify(bookmarkData)
+            body: JSON.stringify(documentData)
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
             if (response.status === 401) {
                 throw new Error('API密钥无效');
             } else if (response.status === 404) {
                 throw new Error('服务器接口不存在');
             } else {
-                throw new Error(`服务器错误: ${response.status}`);
+                throw new Error(`服务器错误 ${response.status}: ${errorText}`);
             }
         }
 
         return await response.json();
+    }
+
+    // 生成摘要
+    generateSummary(bookmarkData) {
+        const parts = [];
+        
+        if (bookmarkData.domain) {
+            parts.push(`来自 ${bookmarkData.domain}`);
+        }
+        
+        if (bookmarkData.summary) {
+            parts.push(bookmarkData.summary);
+        } else if (bookmarkData.note) {
+            parts.push(bookmarkData.note);
+        }
+        
+        return parts.join(' - ') || `网页收藏: ${bookmarkData.title || ''}`;
+    }
+
+    // 生成内容
+    generateContent(bookmarkData) {
+        const content = [];
+        
+        content.push(`# ${bookmarkData.title || 'Untitled'}`);
+        content.push('');
+        content.push(`**网址**: ${bookmarkData.url || ''}`);
+        
+        if (bookmarkData.domain) {
+            content.push(`**域名**: ${bookmarkData.domain}`);
+        }
+        
+        if (bookmarkData.extracted_at) {
+            content.push(`**收藏时间**: ${new Date(bookmarkData.extracted_at).toLocaleString('zh-CN')}`);
+        }
+        
+        if (bookmarkData.tags && bookmarkData.tags.length > 0) {
+            const tags = Array.isArray(bookmarkData.tags) ? bookmarkData.tags : [bookmarkData.tags];
+            content.push(`**标签**: ${tags.join(', ')}`);
+        }
+        
+        if (bookmarkData.keywords && bookmarkData.keywords.length > 0) {
+            content.push(`**关键词**: ${bookmarkData.keywords.join(', ')}`);
+        }
+        
+        if (bookmarkData.note) {
+            content.push('');
+            content.push('## 备注');
+            content.push(bookmarkData.note);
+        }
+        
+        if (bookmarkData.summary && bookmarkData.summary !== bookmarkData.note) {
+            content.push('');
+            content.push('## 摘要');
+            content.push(bookmarkData.summary);
+        }
+        
+        if (bookmarkData.content) {
+            content.push('');
+            content.push('## 文章内容');
+            content.push(bookmarkData.content);
+        }
+        
+        return content.join('\n');
     }
 
     async saveToLocal(bookmarkData) {
@@ -303,6 +380,7 @@ class BookmarkPopup {
 
 // 在页面中执行的内容提取函数（独立函数，不属于类）
 function extractArticleContent() {
+    try {
     // 常见的文章内容选择器
     const articleSelectors = [
         'article',
@@ -332,12 +410,17 @@ function extractArticleContent() {
     let summary = '';
 
     // 提取标题
-    const titleSelectors = ['h1', 'title', '.title', '.post-title', '.article-title'];
-    for (const selector of titleSelectors) {
-        const titleEl = document.querySelector(selector);
-        if (titleEl && titleEl.textContent.trim()) {
-            title = titleEl.textContent.trim();
-            break;
+    const currentUrl = window.location.href || '';
+    if(currentUrl.startsWith('https://github.com/')){
+        title = currentUrl.replace('https://github.com/', '');
+    }else{
+        const titleSelectors = ['h1', 'title', '.title', '.post-title', '.article-title'];
+        for (const selector of titleSelectors) {
+            const titleEl = document.querySelector(selector);
+            if (titleEl && titleEl.textContent.trim()) {
+                title = titleEl.textContent.trim();
+                break;
+            }
         }
     }
 
@@ -367,46 +450,94 @@ function extractArticleContent() {
 
     // 简单的关键词提取函数（在content script中定义）
     function extractKeywords(text) {
-        if (!text) return [];
+        if (!text || typeof text !== 'string') return [];
         
-        // 移除标点符号，转换为小写，分割成词
-        const words = text.toLowerCase()
-            .replace(/[^\w\s\u4e00-\u9fff]/g, ' ')
-            .split(/\s+/)
-            .filter(word => word.length > 2); // 过滤太短的词
+        try {
+            // 移除标点符号，转换为小写，分割成词
+            const words = text.toLowerCase()
+                .replace(/[^\w\s\u4e00-\u9fff]/g, ' ')
+                .split(/\s+/)
+                .filter(word => word && word.length > 2); // 过滤太短的词
 
-        // 统计词频
-        const wordCount = {};
-        words.forEach(word => {
-            wordCount[word] = (wordCount[word] || 0) + 1;
-        });
+            // 统计词频
+            const wordCount = {};
+            words.forEach(word => {
+                wordCount[word] = (wordCount[word] || 0) + 1;
+            });
 
-        // 排序并返回前10个高频词
-        return Object.entries(wordCount)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10)
-            .map(([word]) => word);
+            // 排序并返回前10个高频词
+            return Object.entries(wordCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([word]) => word);
+        } catch (error) {
+            console.error('关键词提取失败:', error);
+            return [];
+        }
     }
 
     // 生成摘要（前200字符）
-    if (content.length > 200) {
+    if (content && content.length > 200) {
         summary = content.substring(0, 200) + '...';
     } else {
-        summary = content;
+        summary = content || '';
     }
 
     // 提取关键词
     const keywords = extractKeywords(content);
 
+    // 安全获取页面信息
+    const getPageTitle = () => {
+        try {
+            console.info("title:"+title)
+            console.info("document.title:"+document.title)
+            return title || document.title || '无标题';
+        } catch (error) {
+            console.error('获取页面标题失败:', error);
+            return '无标题';
+        }
+    };
+
+    const getPageUrl = () => {
+        try {
+            return window.location.href || '';
+        } catch (error) {
+            console.error('获取页面URL失败:', error);
+            return '';
+        }
+    };
+
+    const getPageDomain = () => {
+        try {
+            return window.location.hostname || '';
+        } catch (error) {
+            console.error('获取页面域名失败:', error);
+            return '';
+        }
+    };
+
     return {
-        title: title || document.title,
-        content: content,
+        title: getPageTitle(),
+        content: content || '',
         summary: summary,
         keywords: keywords,
-        url: window.location.href,
-        domain: window.location.hostname,
+        url: getPageUrl(),
+        domain: getPageDomain(),
         timestamp: new Date().toISOString()
     };
+    } catch (error) {
+        console.error('内容提取失败:', error);
+        // 返回安全的默认值
+        return {
+            title: '无标题',
+            content: '',
+            summary: '',
+            keywords: [],
+            url: '',
+            domain: '',
+            timestamp: new Date().toISOString()
+        };
+    }
 }
 
 // 当页面加载完成时初始化

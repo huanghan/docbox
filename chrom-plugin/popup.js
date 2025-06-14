@@ -146,6 +146,33 @@ class BookmarkPopup {
         tagsInput.addEventListener('input', () => {
             this.saveSettings();
         });
+
+        // 设置按钮事件（美化弹窗）
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const serverUrlInput = document.getElementById('serverUrlInput');
+        const saveServerUrlBtn = document.getElementById('saveServerUrlBtn');
+        const cancelServerUrlBtn = document.getElementById('cancelServerUrlBtn');
+
+        settingsBtn.addEventListener('click', async () => {
+            const result = await chrome.storage.sync.get(['serverUrl']);
+            serverUrlInput.value = result.serverUrl || '';
+            settingsModal.style.display = 'flex';
+            serverUrlInput.focus();
+        });
+
+        cancelServerUrlBtn.addEventListener('click', () => {
+            settingsModal.style.display = 'none';
+        });
+
+        saveServerUrlBtn.addEventListener('click', async () => {
+            const newUrl = serverUrlInput.value.trim();
+            if (newUrl) {
+                await chrome.storage.sync.set({ serverUrl: newUrl });
+                settingsModal.style.display = 'none';
+                this.showStatus('服务器地址已保存', 'success');
+            }
+        });
     }
 
     async saveBookmark() {

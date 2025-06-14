@@ -242,4 +242,63 @@ textarea::-webkit-scrollbar-thumb {
 
 textarea::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
+}
+
+/* 设置按钮（齿轮图标） */
+.settings-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    position: absolute;
+    left: 20px;
+    bottom: 30px;
+    padding: 6px;
+    border-radius: 50%;
+    transition: background 0.2s;
+    z-index: 10;
+    width: 10px;
+    height: 10px;
+}
+.settings-btn:hover {
+    background: #f0f0f0;
+}
+
+/* 设置弹窗 */
+.settings-modal {
+    position: fixed;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+.settings-modal-content {
+    background: #fff;
+    border-radius: 8px;
+    padding: 24px 20px 16px 20px;
+    min-width: 260px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+}
+.settings-modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 18px;
+    color: #333;
+}
+.settings-modal-actions {
+    margin-top: 18px;
+    text-align: right;
+}
+.settings-modal-actions .save-btn,
+.settings-modal-actions .cancel-btn {
+    margin-left: 8px;
+}
+
+.footer-line {
+    width: 100%;
+    height: 1px;
+    background: #e5e7eb;
+    margin: 12px 0 8px 0;
+    border: none;
 } 

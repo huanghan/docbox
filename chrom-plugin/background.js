@@ -250,7 +250,7 @@ class BookmarkBackground {
     // 发送到服务器
     async sendToServer(bookmarkData) {
         const result = await chrome.storage.sync.get(['serverUrl', 'apiKey', 'userId']);
-        const serverUrl = result.serverUrl || 'http://localhost:8001';
+        const serverUrl = result.serverUrl ;
         const apiKey = result.apiKey || '';
         const userId = result.userId || 1; // 默认用户ID
 
@@ -397,7 +397,7 @@ class BookmarkBackground {
         
         if (!result.serverUrl) {
             await chrome.storage.sync.set({
-                serverUrl: 'http://localhost:8000',
+                serverUrl: 'http://127.0.0.1:80',
                 apiKey: '',
                 userId: 1,
                 autoTags: true,

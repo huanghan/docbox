@@ -216,7 +216,7 @@ class BookmarkPopup {
     async sendToServer(bookmarkData) {
         // 从存储中获取服务器配置
         const result = await chrome.storage.sync.get(['serverUrl', 'apiKey', 'userId']);
-        const serverUrl = result.serverUrl || 'http://localhost:8001'; // 默认服务器地址
+        const serverUrl = result.serverUrl ; // 默认服务器地址
         const apiKey = result.apiKey || '';
         const userId = result.userId || 1; // 默认用户ID
 

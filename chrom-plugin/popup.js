@@ -146,6 +146,33 @@ class BookmarkPopup {
         tagsInput.addEventListener('input', () => {
             this.saveSettings();
         });
+
+        // 设置按钮事件（美化弹窗）
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const serverUrlInput = document.getElementById('serverUrlInput');
+        const saveServerUrlBtn = document.getElementById('saveServerUrlBtn');
+        const cancelServerUrlBtn = document.getElementById('cancelServerUrlBtn');
+
+        settingsBtn.addEventListener('click', async () => {
+            const result = await chrome.storage.sync.get(['serverUrl']);
+            serverUrlInput.value = result.serverUrl || '';
+            settingsModal.style.display = 'flex';
+            serverUrlInput.focus();
+        });
+
+        cancelServerUrlBtn.addEventListener('click', () => {
+            settingsModal.style.display = 'none';
+        });
+
+        saveServerUrlBtn.addEventListener('click', async () => {
+            const newUrl = serverUrlInput.value.trim();
+            if (newUrl) {
+                await chrome.storage.sync.set({ serverUrl: newUrl });
+                settingsModal.style.display = 'none';
+                this.showStatus('服务器地址已保存', 'success');
+            }
+        });
     }
 
     async saveBookmark() {
@@ -216,7 +243,7 @@ class BookmarkPopup {
     async sendToServer(bookmarkData) {
         // 从存储中获取服务器配置
         const result = await chrome.storage.sync.get(['serverUrl', 'apiKey', 'userId']);
-        const serverUrl = result.serverUrl || 'http://localhost:8001'; // 默认服务器地址
+        const serverUrl = result.serverUrl ; // 默认服务器地址
         const apiKey = result.apiKey || '';
         const userId = result.userId || 1; // 默认用户ID
 

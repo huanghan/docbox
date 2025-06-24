@@ -32,3 +32,27 @@ CREATE TABLE IF NOT EXISTS docs (
 INSERT INTO docs (uid, title, summary, content, source, tags, evaluate) VALUES 
 (1, '欢迎文档', '系统欢迎文档', '欢迎使用NoteDocs文档管理系统！', 'system', 'welcome,system', 5),
 (1, '使用指南', 'FastAPI文档系统使用说明', '这是一个基于FastAPI和MySQL的文档管理系统。', 'manual', 'guide,fastapi,mysql', 4); 
+
+
+
+-- 创建分类表
+CREATE TABLE IF NOT EXISTS categories (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    uid BIGINT NOT NULL DEFAULT 0,           -- 所属于用户ID
+    name VARCHAR(255) NOT NULL DEFAULT  '', -- 分类名称
+    tags VARCHAR(1024) NOT NULL DEFAULT '', -- 分类标签
+    icon VARCHAR(1024) NOT NULL DEFAULT '', -- 分类图标
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_categories_uid (uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建分类-文档表
+CREATE TABLE IF NOT EXISTS categories_docs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    category_id BIGINT NOT NULL DEFAULT 0,      -- 所属于分类ID
+    doc_id BIGINT NOT NULL DEFAULT 0,           -- 所属于文档ID
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_categories_docs_category_id (category_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

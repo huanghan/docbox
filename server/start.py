@@ -4,7 +4,7 @@
 import time
 import sys
 #from database import db
-from database_sqlite import db
+from db.database_sqlite import db
 from config import API_CONFIG
 
 def check_database_connection():

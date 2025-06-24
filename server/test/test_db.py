@@ -2,7 +2,7 @@
 数据库功能测试脚本
 """
 import time
-from database import db
+from db.database import db
 
 def test_write_document():
     """测试写入文档"""

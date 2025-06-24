@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "网页收藏助手",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "一键收藏网页到服务器，支持标签管理",
   "permissions": [
     "activeTab",
